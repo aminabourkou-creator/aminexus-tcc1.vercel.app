@@ -3231,7 +3231,7 @@ window.doLogout = function() {
     if(window._unsubRoom) { window._unsubRoom(); window._unsubRoom = null; }
     if(window._unsubNotifs) { window._unsubNotifs(); window._unsubNotifs = null; }
     if(window._unsubRoomChat) { window._unsubRoomChat = null; }
-    if(typeof _unsubRoomChat !== 'undefined' && _unsubRoomChat) { _unsubRoomChat(); _unsubRoomChat = null; }
+    if(window._unsubRoomChat) { window._unsubRoomChat(); window._unsubRoomChat = null; }
     if(window.voiceState?.joined) { try { leaveVoice(); } catch(_){} }
     // تنظيف localStorage من الجلسة
     const _savedRoom = localStorage.getItem('pendingRoomId');
@@ -3707,7 +3707,7 @@ function backToMyRoom() {
     window.leaveRoomFirestore(window._myRoomId).catch(() => {});
   }
   if (window._unsubRoom) { window._unsubRoom(); window._unsubRoom = null; }
-  if (typeof _unsubRoomChat !== 'undefined' && _unsubRoomChat) { _unsubRoomChat(); _unsubRoomChat = null; }
+  if (window._unsubRoomChat) { window._unsubRoomChat(); window._unsubRoomChat = null; }
 
   // اقطع الاتصال الصوتي بالكامل — كان متصلاً بالغرفة السابقة
   if (typeof voiceState !== 'undefined' && voiceState.joined && typeof leaveVoice === 'function') {
@@ -4084,7 +4084,7 @@ function joinFriendRoom(friendUid, friendName) {
     window._unsubRoom();
     window._unsubRoom = null;
   }
-  if (typeof _unsubRoomChat !== 'undefined' && _unsubRoomChat) { _unsubRoomChat(); _unsubRoomChat = null; }
+  if (window._unsubRoomChat) { window._unsubRoomChat(); window._unsubRoomChat = null; }
 
   // اقطع الاتصال الصوتي بالغرفة السابقة
   if (typeof voiceState !== 'undefined' && voiceState.joined && typeof leaveVoice === 'function') {
@@ -4180,15 +4180,15 @@ setInterval(() => { if (currentUser) updateFriendReqBadge(); }, 30000);
 
 
 // ══ REAL-TIME ROOM CHAT ══════════════════════════════════════════
-let _unsubRoomChat = null;
+window._unsubRoomChat = null;
 
 function listenToRoomMessages(roomId) {
   // إيقاف الاستماع السابق
-  if (_unsubRoomChat) { _unsubRoomChat(); _unsubRoomChat = null; }
+  if (window._unsubRoomChat) { window._unsubRoomChat(); window._unsubRoomChat = null; }
   if (!window._rtdbOnValue || !window._rtdbRef) return;
 
   const messagesRef = window._rtdbRef(window._rtdb, 'roomChat/' + roomId);
-  _unsubRoomChat = window._rtdbOnValue(messagesRef, (snap) => {
+  window._unsubRoomChat = window._rtdbOnValue(messagesRef, (snap) => {
     if (!snap.exists()) return;
     const msgs = document.getElementById('teamMsgs');
     if (!msgs) return;
