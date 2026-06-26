@@ -527,19 +527,20 @@ html,body{width:100%;height:100%;overflow:hidden;background:var(--pearl)}
 .friend-btn.dm:hover{background:rgba(107,155,184,0.3);}
 
 /* ── DM Panel ── */
-.dm-panel{position:fixed;top:0;right:-380px;width:360px;height:100vh;background:rgba(18,20,30,0.97);backdrop-filter:blur(20px);border-left:1px solid rgba(255,255,255,0.07);z-index:2000;display:flex;flex-direction:column;transition:right 0.3s cubic-bezier(0.4,0,0.2,1);box-shadow:-8px 0 32px rgba(0,0,0,0.5);}
+.dm-panel{position:fixed;top:0;right:-100vw;width:360px;max-width:100vw;height:100vh;height:100dvh;background:rgba(18,20,30,0.97);backdrop-filter:blur(20px);border-left:1px solid rgba(255,255,255,0.07);z-index:2000;display:flex;flex-direction:column;transition:right 0.3s cubic-bezier(0.4,0,0.2,1);box-shadow:-8px 0 32px rgba(0,0,0,0.5);}
 .dm-panel.open{right:0;}
 .dm-panel-header{display:flex;align-items:center;gap:10px;padding:18px 16px 14px;border-bottom:1px solid rgba(255,255,255,0.07);flex-shrink:0;}
+@media(max-width:700px){.dm-panel{width:100vw;}.dm-msgs{min-height:0;}.dm-composer{padding-bottom:max(16px,env(safe-area-inset-bottom));}}
 .dm-panel-avatar{width:38px;height:38px;border-radius:50%;background:linear-gradient(135deg,rgba(201,146,122,0.3),rgba(107,155,184,0.3));display:flex;align-items:center;justify-content:center;font-size:18px;border:1px solid rgba(255,255,255,0.1);}
 .dm-panel-name{font-family:'Cormorant Garamond',serif;font-size:17px;color:rgba(255,255,255,0.85);flex:1;}
 .dm-panel-close{background:none;border:none;color:rgba(255,255,255,0.35);font-size:20px;cursor:pointer;padding:4px 8px;border-radius:6px;transition:all 0.2s;}
 .dm-panel-close:hover{color:rgba(255,255,255,0.7);background:rgba(255,255,255,0.06);}
-.dm-msgs{flex:1;overflow-y:auto;padding:14px 14px 8px;display:flex;flex-direction:column;gap:8px;}
+.dm-msgs{flex:1;overflow-y:auto;padding:14px 14px 8px;display:flex;flex-direction:column;gap:8px;min-height:0;}
 .dm-msg{max-width:78%;padding:9px 13px;border-radius:14px;font-size:13px;line-height:1.5;word-break:break-word;}
 .dm-msg.mine{align-self:flex-end;background:linear-gradient(135deg,rgba(201,146,122,0.25),rgba(107,155,184,0.2));border:1px solid rgba(201,146,122,0.2);color:rgba(255,230,215,0.9);border-bottom-right-radius:4px;}
 .dm-msg.theirs{align-self:flex-start;background:rgba(255,255,255,0.06);border:1px solid rgba(255,255,255,0.08);color:rgba(255,255,255,0.8);border-bottom-left-radius:4px;}
 .dm-msg-time{font-size:10px;opacity:0.4;margin-top:3px;text-align:right;}
-.dm-composer{display:flex;gap:8px;padding:12px 14px 16px;border-top:1px solid rgba(255,255,255,0.07);flex-shrink:0;}
+.dm-composer{display:flex;gap:8px;padding:12px 14px 16px;border-top:1px solid rgba(255,255,255,0.07);flex-shrink:0;padding-bottom:max(16px,env(safe-area-inset-bottom));}
 .dm-input{flex:1;background:rgba(255,255,255,0.05);border:1px solid rgba(255,255,255,0.09);border-radius:10px;padding:9px 12px;color:rgba(255,255,255,0.85);font-size:13px;font-family:'DM Sans',sans-serif;outline:none;resize:none;}
 .dm-input:focus{border-color:rgba(201,146,122,0.4);}
 .dm-send-btn{background:linear-gradient(135deg,rgba(201,146,122,0.5),rgba(107,155,184,0.5));border:none;border-radius:10px;padding:9px 14px;color:#fff;font-size:16px;cursor:pointer;transition:all 0.2s;flex-shrink:0;}
@@ -3745,9 +3746,9 @@ function backToMyRoom() {
 window.backToMyRoom = backToMyRoom;
 
 // ══ DIRECT MESSAGES (DM) ══════════════════════════════════════════
-let _dmCurrentUid = null;
-let _dmCurrentName = null;
-let _dmUnsub = null;
+window._dmCurrentUid = null;
+window._dmCurrentName = null;
+window._dmUnsub = null;
 
 function getDmRoomId(uid1, uid2) {
   // ترتيب ثابت بغض النظر عن من فتح المحادثة
@@ -3756,15 +3757,15 @@ function getDmRoomId(uid1, uid2) {
 
 function openDmPanel(friendUid, friendName) {
   if (!currentUser) return;
-  _dmCurrentUid = friendUid;
-  _dmCurrentName = friendName;
+  window._dmCurrentUid = friendUid;
+  window._dmCurrentName = friendName;
 
   // تحديث الهيدر
   document.getElementById('dmPanelAvatar').textContent = '👤';
   document.getElementById('dmPanelName').textContent = friendName;
 
   // تنظيف المستمع القديم
-  if (_dmUnsub) { _dmUnsub(); _dmUnsub = null; }
+  if (window._dmUnsub) { window._dmUnsub(); window._dmUnsub = null; }
 
   // فتح اللوحة
   document.getElementById('dmPanel').classList.add('open');
@@ -3779,7 +3780,7 @@ function openDmPanel(friendUid, friendName) {
   }
 
   const msgsRef = window._rtdbRef(window._rtdb, 'dm/' + dmId);
-  _dmUnsub = window._rtdbOnValue(msgsRef, (snap) => {
+  window._dmUnsub = window._rtdbOnValue(msgsRef, (snap) => {
     const container = document.getElementById('dmMsgs');
     if (!snap.exists()) {
       container.innerHTML = '<div class="dm-empty">Start a conversation 💬</div>';
@@ -3808,14 +3809,14 @@ function openDmPanel(friendUid, friendName) {
 function closeDmPanel() {
   document.getElementById('dmPanel').classList.remove('open');
   document.getElementById('dmOverlay').style.display = 'none';
-  if (_dmUnsub) { _dmUnsub(); _dmUnsub = null; }
-  _dmCurrentUid = null;
-  _dmCurrentName = null;
+  if (window._dmUnsub) { window._dmUnsub(); window._dmUnsub = null; }
+  window._dmCurrentUid = null;
+  window._dmCurrentName = null;
 }
 
 async function sendDm() {
-  console.log('[DM] sendDm called. currentUser:', currentUser?.uid, '_dmCurrentUid:', _dmCurrentUid);
-  if (!currentUser || !_dmCurrentUid) { console.warn('[DM] Aborted — missing user or target'); return; }
+  console.log('[DM] sendDm called. currentUser:', currentUser?.uid, 'window._dmCurrentUid:', window._dmCurrentUid);
+  if (!currentUser || !window._dmCurrentUid) { console.warn('[DM] Aborted — missing user or target'); return; }
   const input = document.getElementById('dmInput');
   const text = input.value.trim();
   if (!text) { console.warn('[DM] Aborted — empty text'); return; }
@@ -3824,7 +3825,7 @@ async function sendDm() {
   input.value = '';
   input.style.height = 'auto';
 
-  const dmId = getDmRoomId(currentUser.uid, _dmCurrentUid);
+  const dmId = getDmRoomId(currentUser.uid, window._dmCurrentUid);
   console.log('[DM] Sending to dmId:', dmId, 'text:', text);
   try {
     await window._rtdbPush(window._rtdbRef(window._rtdb, 'dm/' + dmId), {
@@ -3866,7 +3867,7 @@ function listenForIncomingDms() {
       roomSnap.forEach(m => { lastMsg = m.val(); });
 
       // إذا الرسالة من الصديق وليست من نفس محادثة مفتوحة
-      if (lastMsg && lastMsg.uid !== currentUser.uid && _dmCurrentUid !== friendUid) {
+      if (lastMsg && lastMsg.uid !== currentUser.uid && window._dmCurrentUid !== friendUid) {
         showDmNotification(friendUid, lastMsg.name, lastMsg.text);
       }
     });
@@ -3919,26 +3920,26 @@ function listenFriendPresence(friendUid, cardEl) {
 }
 
 // ══ TYPING INDICATOR ══════════════════════════════════════════════
-let _dmTypingTimeout = null;
-let _dmTypingUnsub = null;
+window._dmTypingTimeout = null;
+window._dmTypingUnsub = null;
 
 function onDmInputChange() {
-  if (!currentUser || !_dmCurrentUid || !window._rtdbSet || !window._rtdbRef || !window._rtdb) return;
-  const dmId = getDmRoomId(currentUser.uid, _dmCurrentUid);
+  if (!currentUser || !window._dmCurrentUid || !window._rtdbSet || !window._rtdbRef || !window._rtdb) return;
+  const dmId = getDmRoomId(currentUser.uid, window._dmCurrentUid);
   const typRef = window._rtdbRef(window._rtdb, 'typing/' + dmId + '/' + currentUser.uid);
   window._rtdbSet(typRef, { uid: currentUser.uid, name: currentUser.name, ts: Date.now() });
   if (window._rtdbOnDisconnect) window._rtdbOnDisconnect(typRef).remove();
-  clearTimeout(_dmTypingTimeout);
-  _dmTypingTimeout = setTimeout(() => {
+  clearTimeout(window._dmTypingTimeout);
+  window._dmTypingTimeout = setTimeout(() => {
     if (window._rtdbRemove) window._rtdbRemove(typRef).catch(() => {});
   }, 2500);
 }
 
 function listenDmTyping(dmId) {
-  if (_dmTypingUnsub) { _dmTypingUnsub(); _dmTypingUnsub = null; }
+  if (window._dmTypingUnsub) { window._dmTypingUnsub(); window._dmTypingUnsub = null; }
   if (!window._rtdbOnValue || !window._rtdbRef || !window._rtdb) return;
   const typRef = window._rtdbRef(window._rtdb, 'typing/' + dmId);
-  _dmTypingUnsub = window._rtdbOnValue(typRef, (snap) => {
+  window._dmTypingUnsub = window._rtdbOnValue(typRef, (snap) => {
     const el = document.getElementById('dmTyping');
     if (!el) return;
     if (!snap.exists()) { el.textContent = ''; return; }
