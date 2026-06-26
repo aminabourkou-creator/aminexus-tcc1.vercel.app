@@ -1251,6 +1251,13 @@ html,body{width:100%;height:100%;overflow:hidden;background:var(--pearl)}
 <script>
 // ── STATE ─────────────────────────────────────────────────────
 
+// ── تعريف مبكر لدوال DM حتى تعمل أزرار HTML قبل اكتمال التحميل ──
+window.sendDm = function() { console.warn('[DM] sendDm called before init'); };
+window.openDmPanel = function() { console.warn('[DM] openDmPanel called before init'); };
+window.closeDmPanel = function() { console.warn('[DM] closeDmPanel called before init'); };
+window.backToMyRoom = function() { console.warn('[Room] backToMyRoom called before init'); };
+window.joinFriendRoom = function() { console.warn('[Room] joinFriendRoom called before init'); };
+
 let currentUser = null;
 let activeAgent = "claude";
 let authMode = "login";
@@ -3807,16 +3814,18 @@ function closeDmPanel() {
 }
 
 async function sendDm() {
-  if (!currentUser || !_dmCurrentUid) return;
+  console.log('[DM] sendDm called. currentUser:', currentUser?.uid, '_dmCurrentUid:', _dmCurrentUid);
+  if (!currentUser || !_dmCurrentUid) { console.warn('[DM] Aborted — missing user or target'); return; }
   const input = document.getElementById('dmInput');
   const text = input.value.trim();
-  if (!text) return;
-  if (!window._rtdbPush || !window._rtdbRef || !window._rtdb) return;
+  if (!text) { console.warn('[DM] Aborted — empty text'); return; }
+  if (!window._rtdbPush || !window._rtdbRef || !window._rtdb) { console.warn('[DM] Aborted — rtdb not ready', {push: !!window._rtdbPush, ref: !!window._rtdbRef, db: !!window._rtdb}); return; }
 
   input.value = '';
   input.style.height = 'auto';
 
   const dmId = getDmRoomId(currentUser.uid, _dmCurrentUid);
+  console.log('[DM] Sending to dmId:', dmId, 'text:', text);
   try {
     await window._rtdbPush(window._rtdbRef(window._rtdb, 'dm/' + dmId), {
       uid: currentUser.uid,
@@ -3824,8 +3833,9 @@ async function sendDm() {
       text: text,
       ts: Date.now(),
     });
+    console.log('[DM] Message sent successfully');
   } catch(e) {
-    console.error('[DM] send failed:', e);
+    console.error('[DM] send failed:', e.code, e.message);
   }
 }
 
@@ -4243,8 +4253,8 @@ async function sendRoomMessage(text) {
   <div class="dm-typing" id="dmTyping"></div>
   <div class="dm-composer">
     <textarea class="dm-input" id="dmInput" placeholder="Type a message…" rows="1"
-      onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();sendDm();}"></textarea>
-    <button class="dm-send-btn" onclick="sendDm()">➤</button>
+      onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();window.sendDm();}"></textarea>
+    <button class="dm-send-btn" onclick="window.sendDm()">➤</button>
   </div>
 </div>
 <div id="dmOverlay" onclick="closeDmPanel()" style="display:none;position:fixed;inset:0;z-index:1999;background:rgba(0,0,0,0.3);backdrop-filter:blur(2px);"></div>
