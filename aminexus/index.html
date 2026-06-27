@@ -984,6 +984,12 @@ html,body{width:100%;height:100%;overflow:hidden;background:var(--pearl)}
             <button class="collab-btn" onclick="triggerCollab('break')">☕ Break</button>
             <button class="collab-btn" onclick="triggerCollab('stress')">💙 Support</button>
           </div>
+          <!-- زر Community Feed -->
+          <div class="collab-bar" style="margin-top:8px">
+            <button class="collab-btn" onclick="openFeedPage()" style="width:100%;background:linear-gradient(135deg,rgba(107,155,184,0.2),rgba(201,146,122,0.2));border:1px solid rgba(107,155,184,0.3);color:rgba(200,220,235,0.9);">
+              📰 Community Feed
+            </button>
+          </div>
         </div>
 
         <!-- Invite Friend -->
@@ -4414,7 +4420,53 @@ async function sendRoomMessage(text) {
 </div>
 <div id="dmOverlay" onclick="closeDmPanel()" style="display:none;position:fixed;inset:0;z-index:1999;background:rgba(0,0,0,0.3);backdrop-filter:blur(2px);"></div>
 
-<!-- PWA Service Worker Registration -->
+<!-- ══ FEED PAGE ══════════════════════════════════════════════════ -->
+<div id="feedPage" class="screen hidden slide-in" style="position:fixed;inset:0;background:var(--dark);z-index:500;overflow-y:auto;">
+  <div style="max-width:680px;margin:0 auto;padding:16px;">
+
+    <!-- Header -->
+    <div style="display:flex;align-items:center;gap:12px;padding:16px 0 20px;border-bottom:1px solid rgba(255,255,255,0.07);margin-bottom:20px;position:sticky;top:0;background:var(--dark);z-index:10;">
+      <button onclick="closeFeedPage()" style="background:rgba(255,255,255,0.06);border:1px solid rgba(255,255,255,0.1);color:rgba(255,255,255,0.7);border-radius:10px;padding:8px 14px;cursor:pointer;font-size:14px;">← Back</button>
+      <div style="font-family:'Cormorant Garamond',serif;font-size:22px;color:rgba(255,255,255,0.9);flex:1;">Community Feed</div>
+      <div style="width:8px;height:8px;border-radius:50%;background:#66bb6a;animation:dotPulse 2s infinite;"></div>
+    </div>
+
+    <!-- Composer -->
+    <div class="feed-composer" id="feedPageComposer" style="background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.08);border-radius:16px;padding:16px;margin-bottom:20px;">
+      <div style="display:flex;gap:10px;align-items:flex-start;">
+        <div style="width:38px;height:38px;border-radius:50%;background:linear-gradient(135deg,rgba(201,146,122,0.2),rgba(107,155,184,0.2));display:flex;align-items:center;justify-content:center;font-size:18px;flex-shrink:0;">👤</div>
+        <div style="flex:1;">
+          <textarea id="feedPageText" placeholder="Share something with the community…" rows="2"
+            style="width:100%;background:rgba(255,255,255,0.05);border:1px solid rgba(255,255,255,0.08);border-radius:10px;padding:10px 12px;color:rgba(255,255,255,0.85);font-size:14px;font-family:'DM Sans',sans-serif;resize:none;outline:none;"
+            oninput="this.style.height='auto';this.style.height=this.scrollHeight+'px'"></textarea>
+          <div id="feedPageImagePreview" style="display:none;margin:8px 0;position:relative;">
+            <img id="feedPagePreviewImg" style="max-width:100%;max-height:250px;border-radius:10px;object-fit:cover;"/>
+            <button onclick="removeFeedPageImage()" style="position:absolute;top:6px;right:6px;background:rgba(0,0,0,0.6);border:none;color:#fff;border-radius:50%;width:24px;height:24px;cursor:pointer;font-size:14px;">✕</button>
+          </div>
+          <div style="display:flex;align-items:center;gap:8px;margin-top:10px;flex-wrap:wrap;">
+            <div style="display:flex;gap:6px;flex:1;flex-wrap:wrap;">
+              <button class="fp-type active" onclick="fpSelectType(this,'discussion')" style="font-size:11px;padding:4px 10px;border-radius:8px;border:1px solid rgba(107,155,184,0.3);background:rgba(107,155,184,0.15);color:rgba(174,198,207,0.9);cursor:pointer;">💬 Discussion</button>
+              <button class="fp-type" onclick="fpSelectType(this,'question')" style="font-size:11px;padding:4px 10px;border-radius:8px;border:1px solid rgba(255,255,255,0.1);background:transparent;color:rgba(255,255,255,0.4);cursor:pointer;">❓ Question</button>
+              <button class="fp-type" onclick="fpSelectType(this,'showcase')" style="font-size:11px;padding:4px 10px;border-radius:8px;border:1px solid rgba(255,255,255,0.1);background:transparent;color:rgba(255,255,255,0.4);cursor:pointer;">🚀 Showcase</button>
+              <button class="fp-type" onclick="fpSelectType(this,'resource')" style="font-size:11px;padding:4px 10px;border-radius:8px;border:1px solid rgba(255,255,255,0.1);background:transparent;color:rgba(255,255,255,0.4);cursor:pointer;">📚 Resource</button>
+            </div>
+            <input type="file" id="feedPageImageInput" accept="image/*" style="display:none" onchange="handleFeedPageImage(event)"/>
+            <button onclick="document.getElementById('feedPageImageInput').click()" style="background:rgba(107,155,184,0.1);border:1px solid rgba(107,155,184,0.2);color:rgba(107,155,184,0.8);border-radius:8px;padding:6px 10px;cursor:pointer;font-size:16px;">🖼️</button>
+            <button onclick="fpPublishPost()" id="fpPublishBtn" style="background:linear-gradient(135deg,rgba(201,146,122,0.6),rgba(107,155,184,0.6));border:none;color:#fff;border-radius:10px;padding:8px 18px;cursor:pointer;font-size:13px;font-family:'DM Sans',sans-serif;font-weight:500;">Post</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Posts Feed -->
+    <div id="feedPagePosts">
+      <div style="text-align:center;color:rgba(255,255,255,0.3);padding:40px;">Loading posts…</div>
+    </div>
+
+  </div>
+</div>
+
+</body>
 <script>
 if ('serviceWorker' in navigator) {
   window.addEventListener('load', () => {
