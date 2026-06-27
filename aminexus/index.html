@@ -311,6 +311,8 @@ html,body{width:100%;height:100%;overflow:hidden;background:var(--pearl)}
 
 /* Post cards */
 .post-card{background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.08);border-radius:16px;padding:16px;transition:border-color 0.2s;}
+.post-image-wrap{margin:8px 0;border-radius:12px;overflow:hidden;}
+.post-image{width:100%;max-height:400px;object-fit:cover;cursor:pointer;display:block;}
 .post-card:hover{border-color:rgba(255,255,255,0.14);}
 .post-header{display:flex;align-items:center;gap:10px;margin-bottom:10px;}
 .post-user-avatar{width:30px;height:30px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:14px;flex-shrink:0;border:1px solid rgba(255,255,255,0.1);}
@@ -1175,6 +1177,10 @@ html,body{width:100%;height:100%;overflow:hidden;background:var(--pearl)}
               <div class="composer-avatar" id="composerAvatar">👤</div>
               <div class="composer-body">
                 <textarea class="composer-input" id="composerText" placeholder="Share something with the community…" rows="1" oninput="autoResize(this)"></textarea>
+                <div id="composerImagePreview" style="display:none;margin:8px 0;position:relative;">
+                  <img id="composerPreviewImg" style="max-width:100%;max-height:200px;border-radius:10px;object-fit:cover;"/>
+                  <button onclick="removeComposerImage()" style="position:absolute;top:6px;right:6px;background:rgba(0,0,0,0.6);border:none;color:#fff;border-radius:50%;width:24px;height:24px;cursor:pointer;font-size:14px;line-height:1;">✕</button>
+                </div>
                 <div class="composer-toolbar">
                   <div class="composer-types">
                     <button class="type-btn active" onclick="selectPostType(this,'discussion')">💬 Discussion</button>
@@ -1182,6 +1188,10 @@ html,body{width:100%;height:100%;overflow:hidden;background:var(--pearl)}
                     <button class="type-btn" onclick="selectPostType(this,'showcase')">🚀 Showcase</button>
                     <button class="type-btn" onclick="selectPostType(this,'resource')">📚 Resource</button>
                   </div>
+                  <input type="file" id="composerImageInput" accept="image/*" style="display:none" onchange="handleComposerImage(event)"/>
+                  <button class="post-action" onclick="document.getElementById('composerImageInput').click()" style="color:rgba(107,155,184,0.8);font-size:13px;gap:4px;">
+                    🖼️
+                  </button>
                   <button class="composer-post-btn" onclick="publishPost()">Post</button>
                 </div>
               </div>
@@ -2480,16 +2490,26 @@ let currentFilter = 'all';
 let currentPostType = 'discussion';
 
 function initFeed() {
-  feedPosts = []; // يبدأ فارغاً — بدون بيانات وهمية
   const el = document.getElementById('composerAvatar');
   if(el) {
     if(currentUser?.avatarDataUrl) {
       el.innerHTML = '<img src="' + currentUser.avatarDataUrl + '" style="width:34px;height:34px;border-radius:50%;object-fit:cover;"/>';
-    } else {
-      el.textContent = '👤';
-    }
+    } else { el.textContent = '👤'; }
   }
-  renderFeed();
+
+  // إلغاء المستمع القديم
+  if (_feedUnsub) { _feedUnsub(); _feedUnsub = null; }
+
+  // استمع للمنشورات من Firebase
+  if (window.fsListenFeed) {
+    _feedUnsub = window.fsListenFeed((posts) => {
+      feedPosts = posts;
+      renderFeed();
+    });
+  } else {
+    feedPosts = [];
+    renderFeed();
+  }
 }
 
 function renderFeed() {
@@ -2505,59 +2525,50 @@ function renderFeed() {
 
 function renderPost(p) {
   const t = POST_TYPE_STYLES[p.type] || POST_TYPE_STYLES.discussion;
-  const tags = p.tags.map(tag => `<span class="post-tag">${tag}</span>`).join('');
-  const comments = p.comments.map(c => `
-    <div class="comment-item">
-      <div class="comment-avatar">${c.avatar}</div>
-      <div class="comment-body">
-        <div class="comment-author">${c.author}</div>
-        <div class="comment-text">${c.text}</div>
-      </div>
-    </div>`).join('');
+  const likesArr = Array.isArray(p.likes) ? p.likes : [];
+  const liked = likesArr.includes(currentUser?.uid);
+  const likesCount = likesArr.length;
+  const isOwner = p.uid === currentUser?.uid;
+  const timeStr = p.ts ? new Date(p.ts).toLocaleString([], { month:'short', day:'numeric', hour:'2-digit', minute:'2-digit' }) : 'recently';
   return `
   <div class="post-card" id="post-${p.id}">
     <div class="post-header">
-      <div class="post-user-avatar" style="background:linear-gradient(135deg,rgba(201,146,122,0.2),rgba(107,155,184,0.2))">${p.avatar}</div>
+      <div class="post-user-avatar" style="background:linear-gradient(135deg,rgba(201,146,122,0.2),rgba(107,155,184,0.2))">👤</div>
       <div class="post-user-info">
-        <div class="post-user-name">${p.author}</div>
-        <div class="post-meta">${p.time}</div>
+        <div class="post-user-name">${p.author || 'User'}</div>
+        <div class="post-meta">${timeStr}</div>
       </div>
       <span class="post-type-badge" style="color:${t.color};background:${t.bg};border:1px solid ${t.border}">${t.emoji} ${p.type}</span>
+      ${isOwner ? `<button onclick="deletePost('${p.id}')" style="background:none;border:none;color:rgba(255,255,255,0.2);cursor:pointer;font-size:14px;padding:0 6px;" title="Delete">🗑️</button>` : ''}
     </div>
-    <div class="post-body">${p.body}</div>
-    ${tags ? `<div class="post-tags">${tags}</div>` : ''}
+    ${p.text ? `<div class="post-body">${p.text}</div>` : ''}
+    ${p.imageUrl ? `<div class="post-image-wrap"><img src="${p.imageUrl}" class="post-image" style="width:100%;max-height:400px;object-fit:cover;border-radius:12px;margin:8px 0;cursor:pointer;" onclick="this.style.maxHeight=this.style.maxHeight==='none'?'400px':'none'"/></div>` : ''}
     <div class="post-actions">
-      <button class="post-action ${p.liked?'liked':''}" onclick="toggleLike(${p.id})">
-        <svg viewBox="0 0 24 24" ${p.liked?'style="fill:rgba(255,107,107,0.9);stroke:rgba(255,107,107,0.9)"':''}><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg>
-        <span id="likes-${p.id}">${p.likes}</span>
+      <button class="post-action ${liked ? 'liked' : ''}" onclick="toggleLike('${p.id}')">
+        <svg viewBox="0 0 24 24" ${liked ? 'style="fill:rgba(255,107,107,0.9);stroke:rgba(255,107,107,0.9)"' : ''}><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg>
+        ${likesCount}
       </button>
-      <button class="post-action" onclick="toggleComments(${p.id})">
+      <button class="post-action" onclick="toggleComments('${p.id}')">
         <svg viewBox="0 0 24 24"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
-        <span>${p.comments.length}</span>
+        Comment
       </button>
-      <button class="post-action" onclick="sharePost(${p.id})">
+      <button class="post-action" onclick="sharePost('${p.id}')">
         <svg viewBox="0 0 24 24"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/></svg>
         Share
       </button>
-      <div class="post-action-spacer"></div>
-      <button class="post-action" onclick="askAIAboutPost(${p.id})" style="color:rgba(201,146,122,0.7)">
-        <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
-        Ask AI
-      </button>
     </div>
-    <div class="post-comments-section" id="comments-${p.id}">
-      ${comments}
+    <div class="post-comments-section" id="comments-${p.id}" style="display:none;">
+      <div class="comments-list" id="comments-list-${p.id}"></div>
       <div class="comment-input-row">
-        <div class="comment-avatar">${currentUser?.avatarDataUrl ? `<img src="${currentUser.avatarDataUrl}" style="width:24px;height:24px;border-radius:50%;object-fit:cover;"/>` : '👤'}</div>
-        <input class="comment-input" id="comment-input-${p.id}" placeholder="Add a comment…" onkeydown="if(event.key==='Enter')addComment(${p.id})"/>
-        <button class="comment-send-btn" onclick="addComment(${p.id})">
+        <div class="comment-avatar">👤</div>
+        <input class="comment-input" id="comment-input-${p.id}" placeholder="Add a comment…" onkeydown="if(event.key==='Enter')addComment('${p.id}')"/>
+        <button class="comment-send-btn" onclick="addComment('${p.id}')">
           <svg viewBox="0 0 24 24"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>
         </button>
       </div>
     </div>
   </div>`;
 }
-
 function selectPostType(btn, type) {
   currentPostType = type;
   document.querySelectorAll('.type-btn').forEach(b => b.classList.remove('active'));
@@ -2569,25 +2580,67 @@ function autoResize(el) {
   el.style.height = el.scrollHeight + 'px';
 }
 
-function publishPost() {
-  const text = document.getElementById('composerText').value.trim();
-  if(!text) return;
-  const newPost = {
-    id: Date.now(),
-    author: currentUser?.name || 'You',
-    avatar: '👤',
-    type: currentPostType,
-    time: 'just now',
-    body: text,
-    tags: [],
-    likes: 0,
-    comments: [],
-    liked: false,
+let _composerImageFile = null;
+let _composerImageDataUrl = null;
+let _feedUnsub = null;
+let _commentsUnsubMap = {};
+
+function handleComposerImage(event) {
+  const file = event.target.files[0];
+  if (!file) return;
+  _composerImageFile = file;
+  const reader = new FileReader();
+  reader.onload = (e) => {
+    _composerImageDataUrl = e.target.result;
+    document.getElementById('composerPreviewImg').src = e.target.result;
+    document.getElementById('composerImagePreview').style.display = 'block';
   };
-  feedPosts.unshift(newPost);
-  document.getElementById('composerText').value = '';
-  document.getElementById('composerText').style.height = 'auto';
-  renderFeed();
+  reader.readAsDataURL(file);
+}
+
+function removeComposerImage() {
+  _composerImageFile = null;
+  _composerImageDataUrl = null;
+  document.getElementById('composerImagePreview').style.display = 'none';
+  document.getElementById('composerPreviewImg').src = '';
+  document.getElementById('composerImageInput').value = '';
+}
+
+async function publishPost() {
+  const text = document.getElementById('composerText').value.trim();
+  if (!text && !_composerImageFile) return;
+
+  const btn = document.querySelector('.composer-post-btn');
+  if (btn) { btn.disabled = true; btn.textContent = '...'; }
+
+  try {
+    let imageUrl = '';
+    if (_composerImageFile && window.uploadPostImage) {
+      imageUrl = await window.uploadPostImage(_composerImageFile);
+    }
+
+    if (window.fsPublishPost) {
+      await window.fsPublishPost(text, imageUrl, currentPostType);
+    } else {
+      // fallback محلي
+      feedPosts.unshift({
+        id: Date.now(), author: currentUser?.name || 'You',
+        avatar: '👤', type: currentPostType, time: 'just now',
+        body: text, imageUrl, tags: [], likes: 0, comments: [], liked: false,
+      });
+      renderFeed();
+    }
+
+    document.getElementById('composerText').value = '';
+    document.getElementById('composerText').style.height = 'auto';
+    removeComposerImage();
+  } catch(e) {
+    console.error('[Feed] publish failed:', e);
+    showVoiceToast('❌ Failed to post: ' + e.message);
+  } finally {
+    if (btn) { btn.disabled = false; btn.textContent = 'Post'; }
+  }
+}
 }
 
 function setFeedFilter(btn, filter) {
@@ -2597,64 +2650,59 @@ function setFeedFilter(btn, filter) {
   renderFeed();
 }
 
-function toggleLike(id) {
-  const post = feedPosts.find(p => p.id === id);
-  if(!post) return;
-  post.liked = !post.liked;
-  post.likes += post.liked ? 1 : -1;
-  const btn = document.querySelector(`#post-${id} .post-action`);
-  const heart = btn?.querySelector('svg');
-  const count = document.getElementById(`likes-${id}`);
-  if(count) count.textContent = post.likes;
-  if(btn) btn.classList.toggle('liked', post.liked);
-  if(heart) {
-    heart.style.fill = post.liked ? 'rgba(255,107,107,0.9)' : 'none';
-    heart.style.stroke = post.liked ? 'rgba(255,107,107,0.9)' : 'currentColor';
+async function toggleLike(postId) {
+  if (!window.fsToggleLike) return;
+  await window.fsToggleLike(postId);
+}
+
+function toggleComments(postId) {
+  const section = document.getElementById('comments-' + postId);
+  if (!section) return;
+  const isOpen = section.style.display !== 'none';
+  section.style.display = isOpen ? 'none' : 'block';
+  if (!isOpen && window.fsListenComments) {
+    // استمع للتعليقات عند الفتح
+    if (window._commentsUnsubMap && window._commentsUnsubMap[postId]) return;
+    if (!window._commentsUnsubMap) window._commentsUnsubMap = {};
+    window._commentsUnsubMap[postId] = window.fsListenComments(postId, (comments) => {
+      const list = document.getElementById('comments-list-' + postId);
+      if (!list) return;
+      if (comments.length === 0) {
+        list.innerHTML = '<div style="color:rgba(255,255,255,0.3);font-size:12px;padding:8px 0;">No comments yet</div>';
+        return;
+      }
+      list.innerHTML = comments.map(c => `
+        <div class="comment-item">
+          <div class="comment-avatar">👤</div>
+          <div class="comment-body">
+            <div class="comment-author">${c.author}</div>
+            <div class="comment-text">${c.text}</div>
+          </div>
+        </div>`).join('');
+    });
   }
 }
 
-function toggleComments(id) {
-  const section = document.getElementById(`comments-${id}`);
-  if(section) section.classList.toggle('open');
-}
-
-function addComment(id) {
-  const input = document.getElementById(`comment-input-${id}`);
+async function addComment(postId) {
+  const input = document.getElementById('comment-input-' + postId);
   const text = input?.value.trim();
-  if(!text) return;
-  const post = feedPosts.find(p => p.id === id);
-  if(!post) return;
-  post.comments.push({ author: currentUser?.name || 'You', avatar:'👤', text });
+  if (!text) return;
   input.value = '';
-  renderFeed();
-  // Re-open comments
-  setTimeout(() => {
-    const s = document.getElementById(`comments-${id}`);
-    if(s) s.classList.add('open');
-  }, 10);
-}
-
-function sharePost(id) {
-  const post = feedPosts.find(p => p.id === id);
-  if(!post) return;
-  navigator.clipboard?.writeText(`Check this out on AmiNexus: "${post.body.slice(0,80)}…"`).catch(()=>{});
-  // Brief feedback
-  const btn = document.querySelectorAll(`#post-${id} .post-action`)[1];
-  if(btn) { const orig = btn.innerHTML; btn.style.color='rgba(78,204,163,0.9)'; setTimeout(()=>btn.style.color='',1500); }
-}
-
-function askAIAboutPost(id) {
-  const post = feedPosts.find(p => p.id === id);
-  if(!post) return;
-  // Switch to Agent Chat and pre-fill
-  switchView('solo');
-  document.getElementById('tab-solo').classList.add('active');
-  document.getElementById('tab-feed').classList.remove('active');
-  const input = document.getElementById('chatInput');
-  if(input) {
-    input.value = `Regarding this post: "${post.body.slice(0,120)}" — what's your take?`;
-    input.focus();
+  if (window.fsAddComment) {
+    await window.fsAddComment(postId, text);
   }
+}
+
+async function deletePost(postId) {
+  if (!confirm('Delete this post?')) return;
+  if (window.fsDeletePost) await window.fsDeletePost(postId);
+}
+
+function sharePost(postId) {
+  const post = feedPosts.find(p => p.id === postId);
+  const text = post?.text || 'Check this out on AmiNexus Studio!';
+  navigator.clipboard?.writeText(text.slice(0, 100)).catch(() => {});
+  showVoiceToast('🔗 Copied to clipboard!');
 }
 
 
@@ -3178,6 +3226,7 @@ window.doLogout = function() {
     await sendEmailVerification(cred.user);
     await setDoc(doc(db, "users", cred.user.uid), {
       uid: cred.user.uid, name, email,
+      nameLower: (name || "").toLowerCase(),
       avatarUrl: "", lang: "ar", plan: "free",
       xp: 0, createdAt: serverTimestamp(),
     });
@@ -3238,7 +3287,6 @@ window.doLogout = function() {
     // إيقاف كل المستمعين
     if(window._unsubRoom) { window._unsubRoom(); window._unsubRoom = null; }
     if(window._unsubNotifs) { window._unsubNotifs(); window._unsubNotifs = null; }
-    if(window._unsubRoomChat) { window._unsubRoomChat = null; }
     if(window._unsubRoomChat) { window._unsubRoomChat(); window._unsubRoomChat = null; }
     if(window.voiceState?.joined) { try { leaveVoice(); } catch(_){} }
     // تنظيف localStorage من الجلسة
@@ -3302,16 +3350,112 @@ window.doLogout = function() {
     } catch(err) { showMsg("خطأ: " + err.message, "error"); }
   };
 
-  // ══ ROOM MEMBERS — Firestore ════════════════════════════════════
+  import { getStorage, ref as storageRef, uploadBytes, getDownloadURL }
+    from "https://www.gstatic.com/firebasejs/10.12.0/firebase-storage.js";
+
+  const storage = getStorage(app);
+
+  // ══ FEED — Firebase Storage + Firestore ══════════════════════════
+
+  window.uploadPostImage = async function(file) {
+    if (!window.currentUser) throw new Error('Not logged in');
+    const path = `posts/${window.currentUser.uid}/${Date.now()}_${file.name}`;
+    const ref = storageRef(storage, path);
+    await uploadBytes(ref, file);
+    return await getDownloadURL(ref);
+  };
+
+  window.fsPublishPost = async function(text, imageUrl, type) {
+    if (!window.currentUser) return;
+    await addDoc(collection(db, 'posts'), {
+      uid: window.currentUser.uid,
+      author: window.currentUser.name || 'User',
+      text: text,
+      imageUrl: imageUrl || '',
+      type: type || 'discussion',
+      likes: [],
+      createdAt: serverTimestamp(),
+      ts: Date.now(),
+    });
+  };
+
+  window.fsListenFeed = function(callback) {
+    const { query: fsQuery, orderBy, limit, onSnapshot: onSnap }
+      = { query: (c,...q) => { const r = Object.create(c); r._constraints = q; return r; },
+          orderBy: () => {}, limit: () => {}, onSnapshot: () => {} };
+    // استخدم onSnapshot مباشرة
+    return onSnapshot(
+      collection(db, 'posts'),
+      { includeMetadataChanges: false },
+      (snap) => {
+        const posts = snap.docs
+          .map(d => ({ id: d.id, ...d.data() }))
+          .sort((a, b) => (b.ts || 0) - (a.ts || 0))
+          .slice(0, 50);
+        callback(posts);
+      }
+    );
+  };
+
+  window.fsToggleLike = async function(postId) {
+    if (!window.currentUser) return;
+    const postRef = doc(db, 'posts', postId);
+    const snap = await getDoc(postRef);
+    if (!snap.exists()) return;
+    const likes = snap.data().likes || [];
+    const uid = window.currentUser.uid;
+    const newLikes = likes.includes(uid)
+      ? likes.filter(l => l !== uid)
+      : [...likes, uid];
+    await updateDoc(postRef, { likes: newLikes });
+  };
+
+  window.fsAddComment = async function(postId, text) {
+    if (!window.currentUser) return;
+    await addDoc(collection(db, 'posts', postId, 'comments'), {
+      uid: window.currentUser.uid,
+      author: window.currentUser.name || 'User',
+      text: text,
+      ts: Date.now(),
+      createdAt: serverTimestamp(),
+    });
+  };
+
+  window.fsListenComments = function(postId, callback) {
+    return onSnapshot(collection(db, 'posts', postId, 'comments'), (snap) => {
+      const comments = snap.docs
+        .map(d => ({ id: d.id, ...d.data() }))
+        .sort((a, b) => (a.ts || 0) - (b.ts || 0));
+      callback(comments);
+    });
+  };
+
+  window.fsDeletePost = async function(postId) {
+    await deleteDoc(doc(db, 'posts', postId));
+  };
   window.joinRoomFirestore = async function(roomId, peerId) {
     if (!window.currentUser) return;
-    await setDoc(doc(db, "rooms", roomId, "members", window.currentUser.uid), {
+    const memberRef = doc(db, "rooms", roomId, "members", window.currentUser.uid);
+    await setDoc(memberRef, {
       uid: window.currentUser.uid,
       name: window.currentUser.name || "Guest",
       avatar: "👤",
       peerId: peerId || "",
       joinedAt: serverTimestamp(),
     });
+    // إزالة العضو تلقائياً عند انقطاع الإنترنت أو إغلاق المتصفح
+    // نستخدم RTDB onDisconnect لأن Firestore لا يدعمها مباشرة
+    if (window._rtdb && window._rtdbRef && window._rtdbOnDisconnect && window._rtdbSet) {
+      const presRef = window._rtdbRef(window._rtdb, 'roomPresence/' + roomId + '/' + window.currentUser.uid);
+      window._rtdbSet(presRef, { uid: window.currentUser.uid, ts: Date.now() });
+      window._rtdbOnDisconnect(presRef).remove();
+      // استمع لـ roomPresence وأزل من Firestore عند الاختفاء
+      window._rtdbOnValue(presRef, async (snap) => {
+        if (!snap.exists()) {
+          try { await deleteDoc(memberRef); } catch(_) {}
+        }
+      });
+    }
   };
 
   window.leaveRoomFirestore = async function(roomId) {
@@ -3384,16 +3528,23 @@ window.doLogout = function() {
   window.fsSearchUsers = async function(query, myUid) {
     const { getDocs, query: fsQuery, where, orderBy, limit, startAt, endAt }
       = await import("https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js");
-    // بحث بالاسم
+    // بحث بالاسم (case-insensitive: نبحث بحروف صغيرة وكبيرة)
+    const queryLower = query.toLowerCase();
     const nameQ = fsQuery(
       collection(db, "users"),
-      where("name", ">=", query),
-      where("name", "<=", query + "\uf8ff"),
+      where("nameLower", ">=", queryLower),
+      where("nameLower", "<=", queryLower + "\uf8ff"),
       limit(10)
     );
     const snap = await getDocs(nameQ);
     const results = [];
     snap.forEach(d => { if (d.id !== myUid) results.push({ uid: d.id, ...d.data() }); });
+    // إذا لم يجد بالـ nameLower، يبحث بالاسم العادي
+    if (results.length === 0) {
+      const nameQ2 = fsQuery(collection(db, "users"), where("name", ">=", query), where("name", "<=", query + "\uf8ff"), limit(10));
+      const snap2b = await getDocs(nameQ2);
+      snap2b.forEach(d => { if (d.id !== myUid) results.push({ uid: d.id, ...d.data() }); });
+    }
     // بحث بالإيميل
     const emailQ = fsQuery(
       collection(db, "users"),
@@ -3756,7 +3907,8 @@ function getDmRoomId(uid1, uid2) {
 }
 
 function openDmPanel(friendUid, friendName) {
-  if (!currentUser) return;
+  const _cu = window.currentUser || currentUser;
+  if (!_cu) return;
   window._dmCurrentUid = friendUid;
   window._dmCurrentName = friendName;
 
@@ -3779,6 +3931,7 @@ function openDmPanel(friendUid, friendName) {
     return;
   }
 
+  const _cuRef = window.currentUser || currentUser;
   const msgsRef = window._rtdbRef(window._rtdb, 'dm/' + dmId);
   window._dmUnsub = window._rtdbOnValue(msgsRef, (snap) => {
     const container = document.getElementById('dmMsgs');
@@ -3791,7 +3944,7 @@ function openDmPanel(friendUid, friendName) {
     msgs.sort((a, b) => a.ts - b.ts);
 
     container.innerHTML = msgs.map(m => {
-      const isMine = m.uid === currentUser.uid;
+      const isMine = m.uid === (window.currentUser?.uid || currentUser?.uid);
       const time = new Date(m.ts).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
       return `<div class="dm-msg ${isMine ? 'mine' : 'theirs'}">
         ${m.text}
@@ -3815,8 +3968,9 @@ function closeDmPanel() {
 }
 
 async function sendDm() {
-  console.log('[DM] sendDm called. currentUser:', currentUser?.uid, 'window._dmCurrentUid:', window._dmCurrentUid);
-  if (!currentUser || !window._dmCurrentUid) { console.warn('[DM] Aborted — missing user or target'); return; }
+  const _cu = window.currentUser || currentUser;
+  console.log('[DM] sendDm called. currentUser:', _cu?.uid, 'window._dmCurrentUid:', window._dmCurrentUid);
+  if (!_cu || !window._dmCurrentUid) { console.warn('[DM] Aborted — missing user or target'); return; }
   const input = document.getElementById('dmInput');
   const text = input.value.trim();
   if (!text) { console.warn('[DM] Aborted — empty text'); return; }
@@ -3825,12 +3979,12 @@ async function sendDm() {
   input.value = '';
   input.style.height = 'auto';
 
-  const dmId = getDmRoomId(currentUser.uid, window._dmCurrentUid);
+  const dmId = getDmRoomId(_cu.uid, window._dmCurrentUid);
   console.log('[DM] Sending to dmId:', dmId, 'text:', text);
   try {
     await window._rtdbPush(window._rtdbRef(window._rtdb, 'dm/' + dmId), {
-      uid: currentUser.uid,
-      name: currentUser.name || 'User',
+      uid: _cu.uid,
+      name: _cu.name || 'User',
       text: text,
       ts: Date.now(),
     });
@@ -4080,6 +4234,7 @@ if (typeof loginSuccess === 'function') {
     setTimeout(listenForIncomingDms, 2000);
     setTimeout(publishPresence, 1500);
     setTimeout(listenFriendRequests, 2000);
+    setTimeout(showPwaInstallBar, 4000); // اعرض زر التثبيت بعد 4 ثواني من تسجيل الدخول
   };
 }
 
@@ -4275,22 +4430,24 @@ let _pwaInstallPrompt = null;
 window.addEventListener('beforeinstallprompt', (e) => {
   e.preventDefault();
   _pwaInstallPrompt = e;
-  // أظهر زر التثبيت بعد 3 ثواني من تسجيل الدخول
-  setTimeout(() => {
-    if (_pwaInstallPrompt && typeof showVoiceToast === 'function') {
-      const bar = document.createElement('div');
-      bar.id = 'pwaInstallBar';
-      bar.style.cssText = 'position:fixed;bottom:80px;left:50%;transform:translateX(-50%);background:linear-gradient(135deg,rgba(201,146,122,0.95),rgba(107,155,184,0.95));color:#fff;padding:12px 20px;border-radius:14px;font-size:13px;font-family:DM Sans,sans-serif;z-index:9999;display:flex;align-items:center;gap:12px;box-shadow:0 8px 32px rgba(0,0,0,0.4);backdrop-filter:blur(10px);';
-      bar.innerHTML = `
-        <img src="/icons/icon-72x72.png" style="width:32px;height:32px;border-radius:8px;"/>
-        <span>Install AmiNexus Studio on your device</span>
-        <button onclick="installPWA()" style="background:rgba(255,255,255,0.25);border:none;color:#fff;padding:6px 14px;border-radius:8px;cursor:pointer;font-size:12px;font-weight:600;">Install</button>
-        <button onclick="document.getElementById('pwaInstallBar').remove()" style="background:none;border:none;color:rgba(255,255,255,0.6);cursor:pointer;font-size:18px;padding:0 4px;">×</button>
-      `;
-      document.body.appendChild(bar);
-    }
-  }, 5000);
+  // لا تُظهر الـ prompt فوراً — انتظر حتى تسجيل الدخول
 });
+
+function showPwaInstallBar() {
+  if (!_pwaInstallPrompt) return;
+  if (document.getElementById('pwaInstallBar')) return;
+  const bar = document.createElement('div');
+  bar.id = 'pwaInstallBar';
+  bar.style.cssText = 'position:fixed;bottom:80px;left:50%;transform:translateX(-50%);background:linear-gradient(135deg,rgba(201,146,122,0.95),rgba(107,155,184,0.95));color:#fff;padding:12px 20px;border-radius:14px;font-size:13px;font-family:DM Sans,sans-serif;z-index:9999;display:flex;align-items:center;gap:12px;box-shadow:0 8px 32px rgba(0,0,0,0.4);backdrop-filter:blur(10px);';
+  bar.innerHTML = `
+    <img src="/icons/icon-192x192.png" style="width:32px;height:32px;border-radius:8px;"/>
+    <span>Install AmiNexus Studio on your device</span>
+    <button onclick="installPWA()" style="background:rgba(255,255,255,0.25);border:none;color:#fff;padding:6px 14px;border-radius:8px;cursor:pointer;font-size:12px;font-weight:600;">Install</button>
+    <button onclick="document.getElementById('pwaInstallBar').remove()" style="background:none;border:none;color:rgba(255,255,255,0.6);cursor:pointer;font-size:18px;padding:0 4px;">×</button>
+  `;
+  document.body.appendChild(bar);
+}
+window.showPwaInstallBar = showPwaInstallBar;
 
 function installPWA() {
   if (!_pwaInstallPrompt) return;
