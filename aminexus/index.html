@@ -2392,11 +2392,12 @@ function openProfile() {
   } else {
     badge.className = 'plan-badge free'; badge.textContent = 'FREE';
   }
-  // Avatar
-  if(currentUser.avatarDataUrl) {
+  // Avatar — يعرض من Firebase Storage أو من الذاكرة
+  const avatarSrc = currentUser.avatarDataUrl || currentUser.avatarUrl || '';
+  if(avatarSrc) {
     document.getElementById('profileAvatarDisplay').style.display='none';
     const img = document.getElementById('profileAvatarImg');
-    img.src = currentUser.avatarDataUrl;
+    img.src = avatarSrc;
     img.style.display='block';
   } else {
     document.getElementById('profileAvatarDisplay').style.display='flex';
@@ -2429,9 +2430,12 @@ function closeProfile() {
   }, 400);
 }
 
+let _pendingAvatarFile = null;
+
 function handleAvatarChange(event) {
   const file = event.target.files[0];
   if (!file) return;
+  _pendingAvatarFile = file;
   const reader = new FileReader();
   reader.onload = function(e) {
     const dataUrl = e.target.result;
@@ -3321,27 +3325,46 @@ window.doLogout = function() {
   // ══ OVERRIDE saveProfile ════════════════════════════════════════
   window.saveProfile = async function() {
     if (!window.currentUser?.uid) return;
-    const newName = document.getElementById("profileNameInput")?.value.trim() || window.currentUser.name;
-    const lang = window.selectedLang || "ar";
+    const btn = document.getElementById("profileSaveBtn");
+    const toast = document.getElementById("profileSaveToast");
+    if (btn) { btn.disabled = true; btn.textContent = '...'; }
+
     try {
-      await window.firebaseSaveProfile(window.currentUser.uid, { name: newName, lang });
+      const newName = document.getElementById("profileNameInput")?.value.trim() || window.currentUser.name;
+      const lang = window.selectedLang || "ar";
+      let avatarUrl = window.currentUser.avatarUrl || "";
+
+      // رفع الصورة إذا اختار المستخدم صورة جديدة
+      if (window._pendingAvatarFile && window.uploadPostImage) {
+        if (toast) toast.textContent = "جاري رفع الصورة…";
+        // نرفع الصورة في مسار الأفاتار
+        const path = `avatars/${window.currentUser.uid}/${Date.now()}_avatar`;
+        const ref = storageRef(storage, path);
+        await uploadBytes(ref, window._pendingAvatarFile);
+        avatarUrl = await getDownloadURL(ref);
+        window.currentUser.avatarUrl = avatarUrl;
+        window._pendingAvatarFile = null;
+      }
+
+      await window.firebaseSaveProfile(window.currentUser.uid, { name: newName, lang, avatarUrl });
       window.currentUser.name = newName;
       window.currentUser.lang = lang;
+
+      // تحديث الواجهة
       const dn = document.getElementById("dashUserName");
       if (dn) dn.textContent = newName;
       const nd = document.getElementById("profileNameDisplay");
       if (nd) nd.textContent = newName;
-      const btn = document.getElementById("profileSaveBtn");
-      const toast = document.getElementById("profileSaveToast");
-      if (btn) { btn.classList.add("saved"); btn.textContent = "✓ تم الحفظ!"; }
+
+      if (btn) { btn.classList.add("saved"); btn.textContent = "✓ Saved!"; }
       if (toast) toast.textContent = "تم حفظ التعديلات بنجاح";
       setTimeout(() => {
-        if (btn) { btn.classList.remove("saved"); btn.textContent = "Save Changes"; }
+        if (btn) { btn.classList.remove("saved"); btn.textContent = "Save Changes"; btn.disabled = false; }
         if (toast) toast.textContent = "";
       }, 2500);
     } catch(err) {
-      const toast = document.getElementById("profileSaveToast");
       if (toast) toast.textContent = "خطأ: " + err.message;
+      if (btn) { btn.disabled = false; btn.textContent = "Save Changes"; }
     }
   };
 
@@ -3449,13 +3472,15 @@ window.doLogout = function() {
       joinedAt: serverTimestamp(),
     });
     // إزالة العضو تلقائياً عند انقطاع الإنترنت أو إغلاق المتصفح
-    // نستخدم RTDB onDisconnect لأن Firestore لا يدعمها مباشرة
-    if (window._rtdb && window._rtdbRef && window._rtdbOnDisconnect && window._rtdbSet) {
+    if (window._rtdb && window._rtdbRef && window._rtdbOnDisconnect && window._rtdbSet && window._rtdbRemove) {
       const presRef = window._rtdbRef(window._rtdb, 'roomPresence/' + roomId + '/' + window.currentUser.uid);
-      window._rtdbSet(presRef, { uid: window.currentUser.uid, ts: Date.now() });
+      // اكتب الحضور وأزله تلقائياً عند انقطاع الاتصال
+      await window._rtdbSet(presRef, { uid: window.currentUser.uid, name: window.currentUser.name, ts: Date.now() });
       window._rtdbOnDisconnect(presRef).remove();
-      // استمع لـ roomPresence وأزل من Firestore عند الاختفاء
-      window._rtdbOnValue(presRef, async (snap) => {
+      // استمع لتغييرات الحضور وأزل من Firestore عند الاختفاء
+      if (window._unsubPresenceMap) window._unsubPresenceMap[roomId + '_' + window.currentUser.uid]?.();
+      if (!window._unsubPresenceMap) window._unsubPresenceMap = {};
+      window._unsubPresenceMap[roomId + '_' + window.currentUser.uid] = window._rtdbOnValue(presRef, async (snap) => {
         if (!snap.exists()) {
           try { await deleteDoc(memberRef); } catch(_) {}
         }
@@ -3465,7 +3490,18 @@ window.doLogout = function() {
 
   window.leaveRoomFirestore = async function(roomId) {
     if (!window.currentUser) return;
+    // إزالة من Firestore
     try { await deleteDoc(doc(db, "rooms", roomId, "members", window.currentUser.uid)); } catch(_) {}
+    // إزالة من RTDB presence
+    if (window._rtdb && window._rtdbRef && window._rtdbRemove) {
+      const presRef = window._rtdbRef(window._rtdb, 'roomPresence/' + roomId + '/' + window.currentUser.uid);
+      try { await window._rtdbRemove(presRef); } catch(_) {}
+    }
+    // إلغاء مستمع الحضور
+    if (window._unsubPresenceMap?.[roomId + '_' + window.currentUser.uid]) {
+      window._unsubPresenceMap[roomId + '_' + window.currentUser.uid]();
+      delete window._unsubPresenceMap[roomId + '_' + window.currentUser.uid];
+    }
   };
 
   window.listenToRoom = function(roomId) {
@@ -3930,7 +3966,7 @@ function openDmPanel(friendUid, friendName) {
   document.getElementById('dmInput').focus();
 
   // استمع للرسائل من Realtime Database
-  const dmId = getDmRoomId(currentUser.uid, friendUid);
+  const dmId = getDmRoomId(_cu.uid, friendUid);
   if (!window._rtdbOnValue || !window._rtdbRef || !window._rtdb) {
     document.getElementById('dmMsgs').innerHTML = '<div class="dm-empty">Connecting…</div>';
     return;
