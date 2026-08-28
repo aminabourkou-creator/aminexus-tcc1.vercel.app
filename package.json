@@ -1,0 +1,41 @@
+{
+  "name": "nexora-studio",
+  "version": "1.0.0",
+  "description": "Private real-time collaboration rooms with AI, chat, tasks and voice.",
+  "main": "index.html",
+  "author": "Yamina Bourkou (aminainfo)",
+  "license": "PROPRIETARY",
+  "private": true,
+  "scripts": {
+    "dev": "http-server -p 8000 -c-1",
+    "build": "echo 'No build step required for static PWA'",
+    "deploy": "vercel",
+    "deploy:prod": "vercel --prod",
+    "firebase:rules": "firebase deploy --only firestore:rules",
+    "firebase:login": "firebase login",
+    "firebase:init": "firebase init",
+    "test:lighthouse": "lighthouse https://nexora-studio.vercel.app --view",
+    "check:pwa": "npm run test:lighthouse"
+  },
+  "devDependencies": {
+    "firebase-tools": "^13.0.0",
+    "vercel": "^latest",
+    "http-server": "^14.1.1"
+  },
+  "keywords": [
+    "chat",
+    "collaboration",
+    "voice",
+    "ai",
+    "pwa",
+    "firebase",
+    "webrtc"
+  ],
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/aminabourkou-creator/nexora.git"
+  },
+  "engines": {
+    "node": ">=16.0.0"
+  }
+}
