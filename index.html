@@ -47,6 +47,34 @@ canvas#bg{position:fixed;inset:0;z-index:0;pointer-events:none;}
 .toast.err{border-color:rgba(239,68,68,.35);color:#fca5a5;}
 .toast.inf{border-color:rgba(212,175,55,.35);color:#E8D9A0;}
 
+/* ADMIN DASHBOARD */
+#admin-dashboard{position:fixed;inset:0;z-index:25;display:flex;flex-direction:column;background:#0B0A08;overflow-y:auto;}
+#admin-dashboard.off{display:none;}
+.admin-header{background:linear-gradient(90deg,rgba(212,175,55,.1),rgba(176,141,43,.05));
+  padding:16px;border-bottom:1px solid rgba(212,175,55,.2);display:flex;align-items:center;justify-content:space-between;}
+.admin-header h1{font-family:'Playfair Display',serif;font-size:22px;color:#D4AF37;}
+.admin-close{background:rgba(239,68,68,.1);border:1px solid rgba(239,68,68,.3);color:#fca5a5;
+  padding:8px 12px;border-radius:8px;cursor:pointer;font-weight:700;}
+.admin-body{flex:1;overflow-y:auto;padding:20px;}
+.admin-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:16px;margin-bottom:24px;}
+.stat-card{background:rgba(212,175,55,.08);border:1px solid rgba(212,175,55,.2);border-radius:12px;
+  padding:20px;text-align:center;}
+.stat-card .number{font-family:'Playfair Display',serif;font-size:32px;color:#D4AF37;font-weight:700;}
+.stat-card .label{color:#9C9282;font-size:13px;margin-top:8px;}
+.admin-section{margin-bottom:28px;}
+.admin-section h2{font-family:'Playfair Display',serif;color:#D4AF37;font-size:18px;margin-bottom:12px;}
+.users-list{background:rgba(17,24,39,.5);border:1px solid rgba(212,175,55,.15);border-radius:10px;
+  overflow-y:auto;max-height:300px;}
+.user-item{padding:12px;border-bottom:1px solid rgba(212,175,55,.1);display:flex;align-items:center;gap:10px;}
+.user-item:last-child{border-bottom:none;}
+.user-avatar{width:32px;height:32px;border-radius:50%;background:rgba(212,175,55,.2);display:flex;
+  align-items:center;justify-content:center;font-size:12px;color:#D4AF37;}
+.user-info{flex:1;}
+.user-info .name{color:#F5EFDD;font-weight:600;}
+.user-info .email{color:#9C9282;font-size:12px;}
+.admin-badge{background:rgba(34,197,94,.15);border:1px solid rgba(34,197,94,.3);color:#86efac;
+  padding:2px 8px;border-radius:4px;font-size:11px;font-weight:700;}
+
 /* LOGO */
 .logo-box{background:linear-gradient(145deg,#0E0B06,#1C170F);display:flex;align-items:center;justify-content:center;
   box-shadow:0 0 30px rgba(212,175,55,.5),0 0 60px rgba(176,141,43,.2);}
@@ -537,7 +565,7 @@ canvas#bg{position:fixed;inset:0;z-index:0;pointer-events:none;}
       Continue with Google
     </button>
     <div class="auth-foot"><span id="aFT">Don't have an account?</span> <a id="aFL" onclick="switchTab('up')">Sign Up</a></div>
-    <div style="text-align:center;margin-top:14px"><a href="./privacy.html" style="color:#9C9282;font-size:11px;text-decoration:underline">Privacy Policy</a></div>
+    <div style="text-align:center;margin-top:14px"><a href="./privacy.html" style="color:#9C9282;font-size:11px;text-decoration:underline">Privacy Policy</a> | <a href="./tos.html" style="color:#9C9282;font-size:11px;text-decoration:underline">Terms</a></div>
   </div>
 </div>
 
@@ -563,11 +591,6 @@ canvas#bg{position:fixed;inset:0;z-index:0;pointer-events:none;}
           font-weight:800;border-radius:99px;padding:1px 7px">0</span></div>
       <div class="nrow" onclick="navTo(this);openM('profile')"><span class="ni">👤</span><span class="nl">Profile</span></div>
       <div class="nrow" onclick="navTo(this);openM('profile')"><span class="ni">⚙️</span><span class="nl">Settings</span></div>
-      <div id="adminRowContainer" style="display:none;margin-top:8px;border-top:1px solid rgba(212,175,55,.2);padding-top:8px">
-        <div class="nrow" onclick="navTo(this);openM('admin')" style="background:rgba(212,175,55,.08);border:1px solid rgba(212,175,55,.2)">
-          <span class="ni">👑</span><span class="nl">Admin Panel</span>
-        </div>
-      </div>
     </nav>
     <div class="ucard" id="uCard">
       <h4>👑 Upgrade to SVIP</h4>
@@ -656,6 +679,7 @@ canvas#bg{position:fixed;inset:0;z-index:0;pointer-events:none;}
       <div class="rid-row"><span class="rid-txt" id="rvId">#—</span><button class="bcid" onclick="cpyId()" title="Copy ID">📋</button></div>
       <div class="on-info" id="rvOnline">● 1 Online</div>
       <div class="on-avs" id="rvAvs"></div>
+      <button class="ib gh" onclick="clearRoomMessages()" title="Clear all messages" style="width:100%;margin-top:8px;padding:8px;border-radius:8px;border:1px solid rgba(239,68,68,.3);background:rgba(239,68,68,.1);color:#fca5a5;font-size:12px;font-weight:700;cursor:pointer">🗑 Clear Messages</button>
     </div>
     <div class="rnav">
       <div class="rni on" onclick="rTab('chat',this)">💬 Chat</div>
@@ -683,6 +707,9 @@ canvas#bg{position:fixed;inset:0;z-index:0;pointer-events:none;}
         <div class="av" id="rvAv" style="width:32px;height:32px;font-size:11px"></div>
       </div>
     </div>
+    <div style="display:flex;align-items:center;gap:8px;padding:0 12px;">
+      <button class="ib gh" id="adminToggleBtn" onclick="toggleAdminDashboard()" title="Admin Dashboard" style="background:rgba(212,175,55,.15);color:#D4AF37;display:none">⚙️</button>
+    </div>
     <div class="rtabs">
       <div class="rtab on" id="rt-chat" onclick="rTab('chat',this)">💬 Chat</div>
       <div class="rtab" id="rt-whiteboard" onclick="rTab('whiteboard',this)">🖊️ Board</div>
@@ -698,6 +725,10 @@ canvas#bg{position:fixed;inset:0;z-index:0;pointer-events:none;}
       <div id="voiceAudios" style="display:none"></div>
     </div>
     <div id="p-chat" style="display:flex;flex-direction:column;flex:1;overflow:hidden">
+      <div style="display:flex;justify-content:space-between;align-items:center;padding:8px 12px;border-bottom:1px solid rgba(212,175,55,.1);">
+        <span id="roomTitle" style="font-size:13px;font-weight:600;color:#D4AF37;"></span>
+        <button onclick="clearRoomMessages()" style="padding:6px 10px;background:rgba(239,68,68,.1);border:1px solid rgba(239,68,68,.3);color:#fca5a5;border-radius:6px;font-size:11px;font-weight:700;cursor:pointer;">🗑️ Clear</button>
+      </div>
       <div class="chat-area" id="chatArea"></div>
       <div class="cinp-wrap">
         <div id="chatEmojiPop" class="egrid" style="display:none;position:absolute;bottom:64px;left:12px;right:12px;
@@ -835,7 +866,7 @@ canvas#bg{position:fixed;inset:0;z-index:0;pointer-events:none;}
       <button class="bok" id="pSaveBtn" onclick="saveProfile()">Save</button>
     </div>
     <button class="bcnl" style="width:100%;margin-top:9px;color:#f87171" onclick="doLogout();closeM('profile')">Sign Out</button>
-    <div style="text-align:center;margin-top:12px"><a href="./privacy.html" style="color:#9C9282;font-size:11px;text-decoration:underline">Privacy Policy</a></div>
+    <div style="text-align:center;margin-top:12px"><a href="./privacy.html" style="color:#9C9282;font-size:11px;text-decoration:underline">Privacy Policy</a> | <a href="./tos.html" style="color:#9C9282;font-size:11px;text-decoration:underline">Terms</a></div>
   </div>
 </div>
 
@@ -895,98 +926,6 @@ canvas#bg{position:fixed;inset:0;z-index:0;pointer-events:none;}
   </div>
 </div>
 
-<!-- ADMIN DASHBOARD MODAL -->
-<div class="ovl off" id="m-admin">
-  <div class="modal" style="max-width:900px;max-height:90vh;display:flex;flex-direction:column">
-    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px">
-      <h2>👑 Admin Dashboard</h2>
-      <button class="ib gh" onclick="closeM('admin')" style="font-size:18px">✕</button>
-    </div>
-    
-    <!-- Admin Stats -->
-    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:12px;margin-bottom:18px">
-      <div class="card" style="padding:14px;text-align:center;background:rgba(212,175,55,.08);border:1px solid rgba(212,175,55,.2)">
-        <div style="font-size:24px;margin-bottom:4px">👥</div>
-        <div style="font-size:18px;font-weight:700;color:#D4AF37" id="adStatUsers">0</div>
-        <div style="font-size:11px;color:#9C9282">Total Users</div>
-      </div>
-      <div class="card" style="padding:14px;text-align:center;background:rgba(212,175,55,.08);border:1px solid rgba(212,175,55,.2)">
-        <div style="font-size:24px;margin-bottom:4px">🚪</div>
-        <div style="font-size:18px;font-weight:700;color:#D4AF37" id="adStatRooms">0</div>
-        <div style="font-size:11px;color:#9C9282">Total Rooms</div>
-      </div>
-      <div class="card" style="padding:14px;text-align:center;background:rgba(212,175,55,.08);border:1px solid rgba(212,175,55,.2)">
-        <div style="font-size:24px;margin-bottom:4px">💬</div>
-        <div style="font-size:18px;font-weight:700;color:#D4AF37" id="adStatMsgs">0</div>
-        <div style="font-size:11px;color:#9C9282">Messages</div>
-      </div>
-      <div class="card" style="padding:14px;text-align:center;background:rgba(212,175,55,.08);border:1px solid rgba(212,175,55,.2)">
-        <div style="font-size:24px;margin-bottom:4px">✉️</div>
-        <div style="font-size:18px;font-weight:700;color:#D4AF37" id="adStatDMs">0</div>
-        <div style="font-size:11px;color:#9C9282">Direct Chats</div>
-      </div>
-    </div>
-
-    <!-- Tabs -->
-    <div style="display:flex;gap:6px;margin-bottom:14px;border-bottom:1px solid rgba(255,255,255,.08)">
-      <button class="rtab on" onclick="adTab('stats')" style="flex:1;justify-content:center">📊 Stats</button>
-      <button class="rtab" onclick="adTab('users')" style="flex:1;justify-content:center">👥 Users</button>
-      <button class="rtab" onclick="adTab('rooms')" style="flex:1;justify-content:center">🚪 Rooms</button>
-    </div>
-
-    <!-- Tab Content -->
-    <div style="flex:1;overflow-y:auto">
-      <!-- Stats Tab -->
-      <div id="ad-stats" style="display:block">
-        <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px">
-          <div class="card" style="padding:14px">
-            <h4 style="font-size:13px;font-weight:700;margin-bottom:10px;color:#D4AF37">👥 Users Over Time</h4>
-            <div style="height:120px;background:rgba(255,255,255,.02);border-radius:8px;display:flex;align-items:flex-end;justify-content:space-around;padding:12px">
-              <div style="width:100%;height:80%;background:rgba(212,175,55,.3);border-radius:4px"></div>
-            </div>
-            <small style="color:#9C9282;margin-top:8px;display:block">Real-time chart</small>
-          </div>
-          <div class="card" style="padding:14px">
-            <h4 style="font-size:13px;font-weight:700;margin-bottom:10px;color:#D4AF37">🚪 Rooms Created</h4>
-            <div style="height:120px;background:rgba(255,255,255,.02);border-radius:8px;display:flex;align-items:flex-end;justify-content:space-around;padding:12px">
-              <div style="width:100%;height:60%;background:rgba(176,141,43,.3);border-radius:4px"></div>
-            </div>
-            <small style="color:#9C9282;margin-top:8px;display:block">Activity snapshot</small>
-          </div>
-        </div>
-        <div class="card" style="padding:14px;margin-top:14px">
-          <h4 style="font-size:13px;font-weight:700;margin-bottom:10px">📈 Quick Stats</h4>
-          <div style="font-size:13px;color:#D8D2C4;line-height:1.8">
-            <div>Last 24h signups: <strong id="ad24hUsers">0</strong></div>
-            <div>Rooms created today: <strong id="ad24hRooms">0</strong></div>
-            <div>Messages today: <strong id="ad24hMsgs">0</strong></div>
-          </div>
-        </div>
-      </div>
-
-      <!-- Users Tab -->
-      <div id="ad-users" style="display:none;max-height:400px;overflow-y:auto">
-        <div class="card" style="padding:12px;margin-bottom:8px;display:none" id="adUsersEmpty">
-          <p style="color:#9C9282;text-align:center;padding:20px">No users yet</p>
-        </div>
-        <div id="adUsersList" style="display:flex;flex-direction:column;gap:8px"></div>
-      </div>
-
-      <!-- Rooms Tab -->
-      <div id="ad-rooms" style="display:none;max-height:400px;overflow-y:auto">
-        <div class="card" style="padding:12px;margin-bottom:8px;display:none" id="adRoomsEmpty">
-          <p style="color:#9C9282;text-align:center;padding:20px">No rooms yet</p>
-        </div>
-        <div id="adRoomsList" style="display:flex;flex-direction:column;gap:8px"></div>
-      </div>
-    </div>
-
-    <div class="macts" style="margin-top:12px">
-      <button class="bcnl" style="width:100%" onclick="closeM('admin')">Close</button>
-    </div>
-  </div>
-</div>
-
 <div id="dm" class="off">
   <div style="display:flex;align-items:center;gap:10px;padding:12px 14px;border-bottom:1px solid rgba(255,255,255,.07);flex-shrink:0">
     <button class="ib gh" onclick="closeDM()">←</button>
@@ -995,6 +934,7 @@ canvas#bg{position:fixed;inset:0;z-index:0;pointer-events:none;}
       <strong id="dmName" style="display:block;font-size:14px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:#F5EFDD">—</strong>
       <small id="dmSub" style="color:#9C9282;font-size:11px">@—</small>
     </div>
+    <button class="ib gh" onclick="deleteDMConversation()" title="Clear conversation" style="color:#ef4444">🗑</button>
   </div>
   <div id="dmArea" style="flex:1;overflow-y:auto;padding:16px"></div>
   <div class="cinp-wrap">
@@ -1011,6 +951,40 @@ canvas#bg{position:fixed;inset:0;z-index:0;pointer-events:none;}
 </script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
+<!-- ADMIN DASHBOARD -->
+<div id="admin-dashboard" class="off">
+  <div class="admin-header">
+    <h1>👑 لوحة التحكم</h1>
+    <button class="admin-close" onclick="toggleAdminDashboard()">✕</button>
+  </div>
+  <div class="admin-body">
+    <div class="admin-grid">
+      <div class="stat-card">
+        <div class="number" id="stat-users">0</div>
+        <div class="label">إجمالي المستخدمين</div>
+      </div>
+      <div class="stat-card">
+        <div class="number" id="stat-active">0</div>
+        <div class="label">نشطين الآن</div>
+      </div>
+      <div class="stat-card">
+        <div class="number" id="stat-rooms">0</div>
+        <div class="label">عدد الغرف</div>
+      </div>
+      <div class="stat-card">
+        <div class="number" id="stat-messages">0</div>
+        <div class="label">إجمالي الرسائل</div>
+      </div>
+    </div>
+    <div class="admin-section">
+      <h2>👥 قائمة المستخدمين</h2>
+      <div class="users-list" id="admin-users-list">
+        <div style="padding:20px;text-align:center;color:#9C9282;">جاري التحميل...</div>
+      </div>
+    </div>
+  </div>
+</div>
+
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
 <script>
 // ── INIT ──
@@ -1218,6 +1192,7 @@ function renderUser(u){
   $('topName').textContent=name;
   $('wMsg').textContent='Welcome, '+name.split(' ')[0]+'! 👋';
   var svipEl=$('svipBadge');if(svipEl)svipEl.style.display=(u.email===OWNER_EMAIL)?'inline-block':'none';
+  var adminBtn=$('adminToggleBtn');if(adminBtn)adminBtn.style.display=(u.email===OWNER_EMAIL)?'flex':'none';
   startFriendsListeners();
   startInboxListener();
 }
@@ -1327,11 +1302,14 @@ function renderFriendList(){
   el.className='';el.style.padding='0';
   el.innerHTML=myFriends.map(function(f){
     var init=initials(f.name,f.email);
-    return '<div class="memrow" style="padding:9px 4px;cursor:pointer" onclick=\'openDMFromData(this)\' data-friend=\''+
+    return '<div class="memrow" style="padding:9px 4px;display:flex;align-items:center;gap:8px">'+
+      '<div style="flex:1;cursor:pointer;display:flex;align-items:center;gap:8px" onclick=\'openDMFromData(this)\' data-friend=\''+
       JSON.stringify({uid:f.uid,name:f.name,username:f.username,photoData:f.photoData||''}).replace(/'/g,"&#39;")+'\'>'+
       '<div class="av" style="width:34px;height:34px;font-size:11px">'+avatarInner(f.photoData,init)+'</div>'+
       '<div class="meminfo" style="flex:1"><strong>'+escHtml(f.name||'User')+'</strong><small>@'+escHtml(f.username||'')+'</small></div>'+
       '<span style="color:#D4AF37;font-size:16px">💬</span>'+
+      '</div>'+
+      '<button class="ib gh" onclick="removeFriend(\''+f.uid+'\')" title="Remove friend" style="color:#ef4444;font-size:14px">✕</button>'+
       '</div>';
   }).join('');
 }
@@ -1339,6 +1317,20 @@ function openDMFromData(el){
   var d=JSON.parse(el.getAttribute('data-friend'));
   openDM(d.uid,d);
   closeM('friends');
+}
+
+function removeFriend(friendUid){
+  if(!confirm('إزالة هذا الصديق؟\n(Remove this friend?)'))return;
+  var batch=db.batch();
+  batch.delete(db.collection('users').doc(user.uid).collection('friends').doc(friendUid));
+  batch.delete(db.collection('users').doc(friendUid).collection('friends').doc(user.uid));
+  batch.commit().then(function(){
+    toast('Friend removed','ok');
+    myFriends=myFriends.filter(function(f){return f.uid!==friendUid;});
+    renderFriendList();
+  }).catch(function(e){
+    toast('Error: '+e.message,'err');
+  });
 }
 
 function searchFriend(){
@@ -1439,6 +1431,54 @@ function closeDM(){
   currentDM=null;
   $('dm').classList.add('off');
 }
+
+// ── ADMIN DASHBOARD ──
+function toggleAdminDashboard(){
+  var dash=$('admin-dashboard');
+  if(!user)return;
+  var isOwner=user.email===OWNER_EMAIL;
+  if(!isOwner){toast('فقط مالكة التطبيق يمكنها الدخول','err');return;}
+  dash.classList.toggle('off');
+  if(!dash.classList.contains('off')){loadAdminDashboard();}
+}
+
+function loadAdminDashboard(){
+  if(!user)return;
+  db.collection('users').get().then(function(snap){
+    var totalUsers=snap.size;
+    $('stat-users').textContent=totalUsers;
+    var usersList='';
+    snap.forEach(function(doc){
+      var data=doc.data();
+      var isOwner=doc.id===OWNER_EMAIL||data.email===OWNER_EMAIL;
+      var badge=isOwner?'<span class="admin-badge">👑 مالك</span>':'';
+      usersList+='<div class="user-item">'+
+        '<div class="user-avatar">'+initials(data.name||'User','')+'</div>'+
+        '<div class="user-info">'+
+          '<div class="name">'+escHtml(data.name||'User')+'</div>'+
+          '<div class="email">'+escHtml(data.email||'')+'</div>'+
+        '</div>'+
+        badge+
+        '</div>';
+    });
+    $('admin-users-list').innerHTML=usersList||'<div style="padding:20px;text-align:center;color:#9C9282;">لا توجد مستخدمين</div>';
+  });
+
+  db.collection('rooms').get().then(function(snap){
+    $('stat-rooms').textContent=snap.size;
+  });
+
+  var now=new Date();
+  var today=new Date(now.getFullYear(),now.getMonth(),now.getDate());
+  db.collectionGroup('messages').where('timestamp','>=',today).get().then(function(snap){
+    $('stat-messages').textContent=snap.size;
+  }).catch(function(){$('stat-messages').textContent='0';});
+
+  db.collection('users').where('lastActive','>=',new Date(Date.now()-3600000)).get().then(function(snap){
+    $('stat-active').textContent=snap.size;
+  }).catch(function(){$('stat-active').textContent='0';});
+}
+
 function addDMMsg(m){
   var area=$('dmArea');
   var own=m.senderId===(user&&user.uid);
@@ -1488,6 +1528,24 @@ function sendDM(){
     senderId:user.uid,senderName:userProfile.name,text:text,type:'text',
     timestamp:firebase.firestore.FieldValue.serverTimestamp()
   }).catch(function(e){toast('Send failed: '+e.message,'err');});
+}
+
+function deleteDMConversation(){
+  if(!currentDM||!user)return;
+  if(!confirm('حذف هذه المحادثة نهائياً؟ (Delete this conversation?)'))return;
+  var id=dmIdFor(currentDM.uid);
+  var batch=db.batch();
+  db.collection('dms').doc(id).collection('messages').get().then(function(snap){
+    snap.forEach(function(d){batch.delete(d.ref);});
+    batch.delete(db.collection('dms').doc(id));
+    batch.delete(db.collection('users').doc(user.uid).collection('dmReads').doc(id));
+    return batch.commit();
+  }).then(function(){
+    toast('Conversation deleted','ok');
+    closeDM();
+  }).catch(function(e){
+    toast('Error: '+e.message,'err');
+  });
 }
 
 // ── MESSAGES INBOX (conversation list + unread badge + toast) ──
@@ -1694,6 +1752,25 @@ function backDash(){
 }
 function cpyId(){navigator.clipboard.writeText(room?room.id:'').then(function(){toast('Room ID copied!','ok');});}
 
+function clearRoomMessages(){
+  if(!room)return;
+  if(!confirm('مسح جميع رسائل هذه الغرفة؟\n(Clear all messages in this room?)'))return;
+  if(room.ownerId!==user.uid){
+    toast('Only room owner can clear messages','err');
+    return;
+  }
+  var batch=db.batch();
+  db.collection('rooms').doc(room.id).collection('messages').get().then(function(snap){
+    snap.forEach(function(d){batch.delete(d.ref);});
+    return batch.commit();
+  }).then(function(){
+    toast('All messages cleared','ok');
+    $('msgArea').innerHTML='';
+  }).catch(function(e){
+    toast('Error: '+e.message,'err');
+  });
+}
+
 // ── CREATE ROOM ──
 var EMOJIS=['🤖','💻','🎨','🚀','🔬','📊','🎯','🏗️','💡','🌐','🔐','⚡'];
 setTimeout(function(){
@@ -1853,6 +1930,21 @@ function leaveRoom(){
   }).then(function(){
     toast('Left "'+rname+'"','ok');
     backDash();
+  }).catch(function(e){toast('Error: '+e.message,'err');});
+}
+
+function clearRoomMessages(){
+  if(!room||!user)return;
+  if(room.ownerId!==user.uid){toast('Only room owner can clear messages','err');return;}
+  if(!confirm('Delete all messages in this room? This cannot be undone!'))return;
+  var rid=room.id;
+  db.collection('rooms').doc(rid).collection('messages').get().then(function(snap){
+    var batch=db.batch();
+    snap.forEach(function(doc){batch.delete(doc.ref);});
+    return batch.commit();
+  }).then(function(){
+    $('chatArea').innerHTML='';
+    toast('All messages cleared','ok');
   }).catch(function(e){toast('Error: '+e.message,'err');});
 }
 
@@ -2083,6 +2175,7 @@ function addMsg(m){
     bodyHtml=fmt(m.text);
   }
   var d=document.createElement('div');d.className='mgrp';
+  var delBtn=(own||room.ownerId===user.uid)?'<button class="ib gh" onclick="delMsg(\''+m.id+'\')" style="color:#ef4444;font-size:11px;padding:2px 6px;margin-left:6px" title="Delete">✕</button>':'';
   d.innerHTML='<div class="mrow">'+
     '<div class="mav'+(isAI?' ai':'')+'">'+init+'</div>'+
     '<div class="mcnt">'+
@@ -2091,10 +2184,19 @@ function addMsg(m){
     (isAI?'<span class="tag-bot">BOT</span>':'')+
     (isOwnerMsg&&!isAI?'<span class="tag-svip">SVIP</span>':'')+
     '<span class="mts">'+fmtTime(m.timestamp)+'</span>'+
+    delBtn+
     '</div>'+
     '<div class="bubble'+(isAI?' ai':own?' own':'')+'">'+bodyHtml+'</div>'+
     '</div></div>';
   ca.appendChild(d);
+}
+
+function delMsg(msgId){
+  if(!room||!msgId)return;
+  if(!confirm('حذف هذه الرسالة؟\n(Delete this message?)'))return;
+  db.collection('rooms').doc(room.id).collection('messages').doc(msgId).delete()
+    .then(function(){toast('Message deleted','ok');})
+    .catch(function(e){toast('Error: '+e.message,'err');});
 }
 
 function sendMsg(){
@@ -2477,135 +2579,6 @@ var pts=Array.from({length:50},function(){
   });});
   requestAnimationFrame(draw);
 })();
-
-// ── ADMIN DASHBOARD ──
-var ADMIN_EMAIL='aminabenzaram@gmail.com';
-var adminStats={users:0,rooms:0,msgs:0,dms:0,users24h:0,rooms24h:0,msgs24h:0};
-var adminUsersData=[],adminRoomsData=[];
-
-function checkAdmin(){
-  if(!user)return;
-  var isAdmin=user.email===ADMIN_EMAIL;
-  var adminRow=$('adminRowContainer');
-  if(adminRow){adminRow.style.display=isAdmin?'block':'none';}
-  if(isAdmin&&!window.adminInitialized){
-    window.adminInitialized=true;
-    loadAdminStats();
-  }
-}
-
-function loadAdminStats(){
-  // Count users
-  db.collection('users').get().then(function(snap){
-    adminStats.users=snap.size;
-    $('adStatUsers').textContent=adminStats.users;
-    adminUsersData=[];
-    snap.forEach(function(d){
-      var userData=d.data();
-      userData.id=d.id;
-      adminUsersData.push(userData);
-    });
-    renderAdminUsers();
-  }).catch(function(e){console.error('Error loading users:',e);});
-
-  // Count rooms
-  db.collection('rooms').get().then(function(snap){
-    adminStats.rooms=snap.size;
-    $('adStatRooms').textContent=adminStats.rooms;
-    adminRoomsData=[];
-    snap.forEach(function(d){
-      var roomData=d.data();
-      roomData.id=d.id;
-      adminRoomsData.push(roomData);
-    });
-    renderAdminRooms();
-  }).catch(function(e){console.error('Error loading rooms:',e);});
-
-  // Count messages
-  db.collectionGroup('messages').get().then(function(snap){
-    adminStats.msgs=snap.size;
-    $('adStatMsgs').textContent=adminStats.msgs;
-  }).catch(function(e){console.error('Error loading messages:',e);});
-
-  // Count DMs
-  db.collection('dms').get().then(function(snap){
-    adminStats.dms=snap.size;
-    $('adStatDMs').textContent=adminStats.dms;
-  }).catch(function(e){console.error('Error loading DMs:',e);});
-
-  // 24h stats (simplified)
-  var now=new Date();
-  var oneDayAgo=new Date(now.getTime()-86400000);
-  var ts=firebase.firestore.Timestamp.fromDate(oneDayAgo);
-  
-  // Users in last 24h
-  db.collection('users').where('createdAt','>=',ts).get().then(function(snap){
-    adminStats.users24h=snap.size;
-    $('ad24hUsers').textContent=adminStats.users24h;
-  }).catch(function(){});
-
-  // Messages in last 24h
-  db.collectionGroup('messages').where('sentAt','>=',ts).get().then(function(snap){
-    adminStats.msgs24h=snap.size;
-    $('ad24hMsgs').textContent=adminStats.msgs24h;
-  }).catch(function(){});
-}
-
-function renderAdminUsers(){
-  var el=$('adUsersList');
-  if(!adminUsersData.length){
-    $('adUsersEmpty').style.display='block';
-    el.innerHTML='';
-    return;
-  }
-  $('adUsersEmpty').style.display='none';
-  el.innerHTML=adminUsersData.map(function(u){
-    var joined=u.createdAt?new Date(u.createdAt.seconds*1000).toLocaleDateString():'—';
-    return '<div class="card" style="padding:12px;border:1px solid rgba(212,175,55,.1)">'+
-      '<div style="display:flex;align-items:center;gap:10px">'+
-      '<div class="av" style="width:32px;height:32px;font-size:10px;flex-shrink:0">'+avatarInner(u.photoData,initials(u.name,u.email))+'</div>'+
-      '<div style="flex:1;min-width:0;font-size:13px">'+
-      '<strong style="display:block">'+escHtml(u.name||u.email)+'</strong>'+
-      '<small style="color:#9C9282">'+escHtml(u.email)+'</small></div>'+
-      '<small style="color:#9C9282;white-space:nowrap">Joined: '+joined+'</small></div></div>';
-  }).join('');
-}
-
-function renderAdminRooms(){
-  var el=$('adRoomsList');
-  if(!adminRoomsData.length){
-    $('adRoomsEmpty').style.display='block';
-    el.innerHTML='';
-    return;
-  }
-  $('adRoomsEmpty').style.display='none';
-  el.innerHTML=adminRoomsData.map(function(r){
-    var owner=adminUsersData.find(function(u){return u.id===r.ownerId;});
-    var ownerName=owner?owner.name:r.ownerId;
-    var memberCount=(r.members||[]).length;
-    return '<div class="card" style="padding:12px;border:1px solid rgba(212,175,55,.1)">'+
-      '<div style="display:flex;align-items:center;gap:10px">'+
-      '<div style="font-size:24px">'+(r.emoji||'🤖')+'</div>'+
-      '<div style="flex:1;min-width:0;font-size:13px">'+
-      '<strong style="display:block">'+escHtml(r.name)+'</strong>'+
-      '<small style="color:#9C9282">Owner: '+escHtml(ownerName)+' • '+memberCount+' members</small></div></div></div>';
-  }).join('');
-}
-
-function adTab(tab){
-  ['stats','users','rooms'].forEach(function(t){
-    var el=$('ad-'+t);
-    if(el)el.style.display=t===tab?'block':'none';
-  });
-  document.querySelectorAll('#m-admin .rtab').forEach(function(b){
-    b.classList.toggle('on',b.textContent.toLowerCase().indexOf(tab)!==-1);
-  });
-}
-
-// Initialize admin on auth change
-auth.onAuthStateChanged(function(){
-  if(user)checkAdmin();
-});
 </script>
 </body>
 </html>
